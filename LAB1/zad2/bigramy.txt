@@ -1,0 +1,9 @@
+EL 2
+LI 1
+IZ 1
+ZK 1
+KA 1
+AH 1
+HE 1
+LL 1
+LO 1
