@@ -17,6 +17,25 @@ Przykład wywołania programu w celu zaszyfrowania tekstu:
 Przykład wywołania programu w celu odszyfrowania tekstu:
 ./program -d -k klucz.txt -i szyfrogram.txt -o tekst_odszyfrowany.txt
 
+### Schemat blokowy 
+```mermaid
+graph TD
+    A(["Start"]) --> B["Wczytanie argumentów (-i, -o, -k, -e, -d)"]
+    B --> C["Wczytaj tekst z pliku (load_file)"]
+    C --> D["Oczyść tekst (preprocess_text)"]
+
+    D --> E{"Tryb szyfrowania (-e) czy deszyfrowania (-d)?"}
+    E -->|Szyfrowanie| F["Wykonaj caesar_cipher(text, key, encrypt=True)"]
+    E -->|Deszyfrowanie| G["Wykonaj caesar_cipher(text, key, encrypt=False)"]
+    E -->|Brak|H["Błąd:  -e lub -d"]
+
+    F --> I["Zapisz wynik do pliku (save_file)"]
+    G --> I
+    H --> I
+
+    I --> J(["Stop"])
+
+```
 #### Implementacja
 
 
@@ -136,6 +155,36 @@ Rozbuduj program z poprzedniego zadania poprzez implementację ataku typu brute-
 Przykład wywołania programu:
 ./program -a bf -i szyfrogram -o tekst_odszyfrowany
 
+### Schemat blokowy 
+```mermaid
+graph TD
+    A(["Start"]) --> B["Wczytanie argumentów (-i, -o, -k, -e, -d, -a)"]
+    B --> C["Wczytaj tekst z pliku (load_file)"]
+    C --> D["Oczyść tekst (preprocess_text)"]
+
+    %% Brute-force
+    D --> E{"Czy -a bf?"}
+    E -->|Tak| F["Wykonaj brute_force_caesar(text)"]
+    F --> G["Zapisz wszystkie kandydaty do pliku (save_file)"]
+    G --> H["Wyświetl komunikat o zakończeniu brute-force"]
+    H --> Z(["Stop"])
+
+    %% Szyfrowanie / deszyfrowanie
+    E -->|Nie| I{"Czy podano -e lub -d?"}
+    I -->|Nie| J["Błąd: musisz podać -e/-d lub -a bf"] --> Z
+    I -->|Tak| K{"Czy podano klucz -k?"}
+    K -->|Nie| L["Błąd: musisz podać -k dla szyfrowania/odszyfrowania"] --> Z
+    K -->|Tak| M["Ustal klucz: key = k % 26"]
+
+    M --> N{"Tryb: szyfrowanie (-e) czy deszyfrowanie (-d)?"}
+    N -->|Szyfrowanie| O["Wykonaj caesar_cipher(text, key, encrypt=True)"]
+    N -->|Deszyfrowanie| P["Wykonaj caesar_cipher(text, key, encrypt=False)"]
+    O --> Q["Zapisz wynik do pliku (save_file)"]
+    P --> Q
+    Q --> R["Wyświetl komunikat o zakończeniu szyfrowania/deszyfrowania"]
+    R --> Z
+
+```
 #### Implementacja
 ``` Python
 import argparse
@@ -319,6 +368,24 @@ Get-Content .\kandydaci.txt -TotalCount 40
 
 ### Zadanie 3
 Napisz program analogiczny do programu z zadania 1, który tym razem implementuje szyfr afiniczny.
+
+### Schemat blokowy 
+```mermaid
+graph TD
+    A([Start]) --> B([Wczytanie argumentów])
+    B --> C{Podano e lub d?}
+    C -->|Nie| D([Błąd: brak trybu]) --> Z([Stop])
+    C -->|Tak| E([Wczytaj tekst z pliku])
+    E --> F([Oczyść tekst])
+    F --> G{Czy a ma odwrotność?}
+    G -->|Nie| H([Błąd: a nie ma odwrotności]) --> Z
+    G -->|Tak| I{Tryb szyfr/odszyfrowanie?}
+    I -->|Szyfrowanie| J([Affine_encrypt])
+    I -->|Deszyfrowanie| K([Affine_decrypt])
+    J --> L([Zapisz wynik])
+    K --> L
+    L --> Z([Stop])
+```
 #### Implementacja
 ``` Python
 import argparse
@@ -505,6 +572,33 @@ Get-Content .\tekst_odszyfrowany.txt
 ### Zadanie 4
 Rozbuduj program z poprzedniego zadania poprzez implementację ataku typu brute-force na szyfrogram zaimplementowany przy pomocy szyfru afinicznego. Sposób pracy z programem powinien być analogiczny do pracy z
 programem z zadania 2.
+
+### Schemat blokowy 
+```mermaid
+graph TD
+    A([Start]) --> B([Wczytanie argumentów])
+    B --> C{Tryb: e, d czy a=bf?}
+    
+    C -->|bf| D([Brute-force: wszystkie a,b])
+    D --> E([Oblicz chi-kwadrat dla kandydatów])
+    E --> F([Posortuj i wybierz top N])
+    F --> G([Zapisz wyniki do pliku])
+    G --> Z([Stop])
+    
+    C -->|e lub d| H([Wczytaj tekst z pliku])
+    H --> I([Zachowaj tylko litery])
+    I --> J([Sprawdź a ma odwrotność mod 26])
+    
+    J -->|Nie| K([Błąd: brak odwrotności]) --> Z
+    J -->|Tak| L{Tryb szyfrowanie czy deszyfrowanie?}
+    L -->|Szyfrowanie| M([Affine_encrypt_preserve])
+    L -->|Deszyfrowanie| N([Affine_decrypt_preserve])
+    
+    M --> O([Zapisz wynik do pliku])
+    N --> O
+    O --> Z([Stop])
+
+```
 #### Implementacja
 ``` Python
 import argparse

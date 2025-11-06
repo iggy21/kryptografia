@@ -18,8 +18,23 @@ Przykład wywołania programu w celu zaszyfrowania tekstu:
 ./program -e -k klucz.txt -i tekst_jawny.txt -o szyfrogram.txt
 Przykład wywołania programu w celu odszyfrowania tekstu:
 ./program -d -k klucz.txt -i szyfrogram.txt -o tekst_odszyfrowany.txt
+#### Schemat blokowy
+```mermaid
+graph TD
+    A(["Start"]) --> B["Wczytanie argumentów z wiersza poleceń (-e, -d, -i, -o, -k)"]
+    B --> C["Wczytanie klucza z pliku (load_key)"]
+    C --> D{"Tryb deszyfrowania? (-d)"}
+    D -->|Tak| E["Odwróć mapowanie klucza (A↔B)"]
+    D -->|Nie| F["Użyj klucza wprost (A→B)"]
+    E --> G["Wczytaj tekst z pliku wejściowego (-i)"]
+    F --> G
+    G --> H["Usuń znaki inne niż litery (preprocess_text)"]
+    H --> I["Podstaw litery według klucza (substitute)"]
+    I --> J["Zapisz wynik do pliku wyjściowego (-o)"]
+    J --> K["Wyświetl komunikat o zakończeniu"]
+    K --> L(["Stop"])
+```
 #### Implementacja
-
 
 ``` Python
 import argparse
@@ -156,6 +171,37 @@ HI 1
 IS 2
 SI 1
 SA 1
+### Schemat blokowy 
+``` mermaid
+graph TD
+    A(["Start"]) --> B["Wczytanie argumentów (-e, -d, -i, -o, -k, -g1...-g4)"]
+    B --> C["Wczytaj tekst wejściowy i przetwórz (preprocess_text)"]
+
+    %% Szyfrowanie / deszyfrowanie
+    C --> D{"Tryb szyfrowania (-e) lub deszyfrowania (-d)?"}
+    D -->|Tak| E["Sprawdź czy podano plik z kluczem (-k) i wyjściowy (-o)"]
+    E --> F["Wczytaj klucz z pliku (load_key)"]
+    F --> G{"Czy deszyfrowanie (-d)?"}
+    G -->|Tak| H["Odwróć mapowanie klucza"]
+    G -->|Nie| I["Użyj klucza bez zmian"]
+    H --> J["Wykonaj podstawienie liter (substitute)"]
+    I --> J
+    J --> K["Zapisz wynik do pliku wyjściowego (-o)"]
+    K --> L["Wyświetl komunikat o zakończeniu"]
+
+    %% Analiza n-gramów
+    C --> M{"Podano argumenty -g1 ... -g4?"}
+    M -->|Tak| N["Dla każdego n: generate_ngrams(text, n)"]
+    N --> O["Zapisz statystyki n-gramów do plików (save_ngram_stats)"]
+    O --> P["Wyświetl komunikat o zapisaniu statystyk"]
+    M -->|Nie| Q["Brak analizy n-gramów"]
+
+    %% Koniec programu
+    L --> R(["Stop"])
+    P --> R
+    Q --> R
+
+```
 #### Implementacja
 
 ```Python 
@@ -354,7 +400,10 @@ python3 zad2.py -d -k klucz.txt -i szyfrogram.txt -o tekst_odkodowany.txt
 Uzupełnij program z poprzedniego zadania, tak aby w przypadku podania flagi -rX, gdzie X jest liczbą należącą do
 zbioru {1, 2, 3, 4} a następnie nazwy pliku, program odczytywał z niego referencyjną bazę n-gramów. Liczby z
 podanego zbioru odpowiadają: {mono-gramom, bi-gramom, tri-gramom, quad-gramom}.
+### Schemat blokowy 
+``` mermaid
 
+```
 #### Implementacja
 ```Python 
 import argparse
