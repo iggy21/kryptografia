@@ -2,17 +2,12 @@ import random
 import math
 import time
 from statistics import mean, stdev
-
 import numpy as np
 import matplotlib.pyplot as plt
 
-# ==============================
-# 1. USTAWIENIA GLOBALNE
-# ==============================
 
 ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
-# Proste częstotliwości liter języka angielskiego
 ENGLISH_FREQ = {
     "E": 12.02, "T": 9.10, "A": 8.12, "O": 7.68, "I": 7.31, "N": 6.95,
     "S": 6.28, "R": 6.02, "H": 5.92, "D": 4.32, "L": 3.98, "U": 2.88,
@@ -21,7 +16,6 @@ ENGLISH_FREQ = {
     "J": 0.10, "Z": 0.07,
 }
 
-# Zamiana na log-prawdopodobieństwa
 LOG_PROBS = {}
 total_freq = sum(ENGLISH_FREQ.values())
 for ch in ALPHABET:
@@ -29,30 +23,17 @@ for ch in ALPHABET:
     p = freq / total_freq
     LOG_PROBS[ch] = math.log(p)
 
-
-# ==============================
-# 2. FUNKCJE KRYPTOSYSTEMU
-# ==============================
-
 def normalize_text(text: str) -> str:
-    """Zamiana na wielkie litery, usunięcie polskich znaków itd. (tu tylko upper)."""
     return text.upper()
 
 
 def generate_random_encryption_key(rng: random.Random) -> str:
-    """Losowa permutacja alfabetu – klucz SZYFRUJĄCY (plaintext -> ciphertext)."""
     perm = list(ALPHABET)
     rng.shuffle(perm)
     return "".join(perm)
 
 
 def encryption_key_to_decryption_key(encrypt_key: str) -> str:
-    """
-    Zwraca klucz DESZYFRUJĄCY (ciphertext -> plaintext)
-    na podstawie klucza szyfrującego.
-    """
-    # encrypt: plaintext[i] -> encrypt_key[i]
-    # decrypt: ciphertext (encrypt_key[i]) -> plaintext[i]
     dec = []
     for ciph in ALPHABET:
         idx = encrypt_key.index(ciph)
@@ -61,7 +42,6 @@ def encryption_key_to_decryption_key(encrypt_key: str) -> str:
 
 
 def encrypt(plaintext: str, encrypt_key: str) -> str:
-    """Szyfr podstawieniowy monoalfabetyczny."""
     text = normalize_text(plaintext)
     result = []
     for ch in text:
@@ -74,7 +54,6 @@ def encrypt(plaintext: str, encrypt_key: str) -> str:
 
 
 def decrypt(ciphertext: str, decryption_key: str) -> str:
-    """Deszyfrowanie przy pomocy klucza DESZYFRUJĄCEGO (cipher -> plain)."""
     result = []
     for ch in ciphertext.upper():
         if ch in ALPHABET:
@@ -86,44 +65,27 @@ def decrypt(ciphertext: str, decryption_key: str) -> str:
 
 
 def score_plaintext(plaintext: str) -> float:
-    """
-    Funkcja celu: suma log-prawdopodobieństw liter.
-    Im wyższa wartość, tym tekst bardziej "angielski".
-    """
     s = 0.0
     for ch in plaintext.upper():
         if ch in ALPHABET:
             s += LOG_PROBS[ch]
     return s
 
-
-# ==============================
-# 3. METRYKI OCENY
-# ==============================
-
 def key_accuracy(true_key: str, recovered_key: str) -> float:
-    """% poprawnie odzyskanych liter klucza (porównujemy dwa klucze deszyfrujące)."""
     assert len(true_key) == len(recovered_key)
     correct = sum(t == r for t, r in zip(true_key, recovered_key))
     return 100.0 * correct / len(true_key)
 
 
 def readability_score(score: float) -> float:
-    """Tu czytelność = wartość funkcji celu."""
     return score
 
 
 def iterations_to_threshold(score_history, threshold):
-    """Pierwsza iteracja, gdzie score >= threshold (1-based)."""
     for i, s in enumerate(score_history, start=1):
         if s >= threshold:
             return i
     return None
-
-
-# ==============================
-# 4. ALGORYTMY MH i SA
-# ==============================
 
 def random_key(rng: random.Random) -> str:
     perm = list(ALPHABET)
@@ -132,7 +94,6 @@ def random_key(rng: random.Random) -> str:
 
 
 def propose_new_key(key: str, rng: random.Random) -> str:
-    """Propozycja nowego klucza: zamiana dwóch losowych pozycji."""
     key_list = list(key)
     i, j = rng.sample(range(len(key_list)), 2)
     key_list[i], key_list[j] = key_list[j], key_list[i]
@@ -140,12 +101,6 @@ def propose_new_key(key: str, rng: random.Random) -> str:
 
 
 def mh_attack(ciphertext: str, max_iter: int, rng: random.Random):
-    """
-    Metropolis–Hastings na przestrzeni permutacji klucza deszyfrującego.
-    Zwraca:
-        best_plaintext, best_key, best_score, score_history
-    """
-    # Stan początkowy:
     cur_key = random_key(rng)
     cur_plain = decrypt(ciphertext, cur_key)
     cur_score = score_plaintext(cur_plain)
@@ -157,12 +112,10 @@ def mh_attack(ciphertext: str, max_iter: int, rng: random.Random):
     history = [cur_score]
 
     for it in range(max_iter):
-        # Propozycja:
         prop_key = propose_new_key(cur_key, rng)
         prop_plain = decrypt(ciphertext, prop_key)
         prop_score = score_plaintext(prop_plain)
 
-        # Symetryczna propozycja => MH:
         delta = prop_score - cur_score
         accept_prob = min(1.0, math.exp(delta))
 
@@ -171,7 +124,6 @@ def mh_attack(ciphertext: str, max_iter: int, rng: random.Random):
             cur_plain = prop_plain
             cur_score = prop_score
 
-        # Aktualizacja najlepszego
         if cur_score > best_score:
             best_score = cur_score
             best_key = cur_key
@@ -183,11 +135,6 @@ def mh_attack(ciphertext: str, max_iter: int, rng: random.Random):
 
 
 def sa_attack(ciphertext: str, max_iter: int, T0: float, alpha: float, rng: random.Random):
-    """
-    Symulowane wyżarzanie (Simulated Annealing).
-    Zwraca:
-        best_plaintext, best_key, best_score, score_history
-    """
     cur_key = random_key(rng)
     cur_plain = decrypt(ciphertext, cur_key)
     cur_score = score_plaintext(cur_plain)
@@ -227,16 +174,9 @@ def sa_attack(ciphertext: str, max_iter: int, T0: float, alpha: float, rng: rand
             best_plain = cur_plain
 
         history.append(cur_score)
-
-        # Chłodzenie
         T *= alpha
 
     return best_plain, best_key, best_score, history
-
-
-# ==============================
-# 5. WIELOKROTNE URUCHOMIENIA (STATYSTYKA)
-# ==============================
 
 def run_many_mh(ciphertext, true_dec_key, n_runs=20, max_iter=20000, threshold=None):
     results = []
@@ -319,15 +259,9 @@ def average_history(results, max_len=None):
     arr = np.array([h[:max_len] for h in histories], dtype=float)
     return arr.mean(axis=0), arr.std(axis=0)
 
-
-# ==============================
-# 6. GŁÓWNA ANALIZA
-# ==============================
-
 def main():
     rng_global = random.Random(123)
 
-    # ===== 6.1. Tekst jawny i szyfr =====
     PLAINTEXT = """
     THIS IS A SAMPLE PLAINTEXT USED TO TEST STOCHASTIC CRYPTANALYSIS METHODS.
     THE GOAL IS TO RECOVER THE SECRET KEY OF A SIMPLE SUBSTITUTION CIPHER.
@@ -347,7 +281,6 @@ def main():
     print("\nPrawdziwy klucz deszyfrujący (cipher -> plain):")
     print(true_dec_key)
 
-    # ===== 6.2. Pojedyncze uruchomienie – orientacyjny score =====
     MAX_ITER_BASE = 8000
     rng_tmp = random.Random(999)
     _, _, score_mh_tmp, _ = mh_attack(ciphertext, MAX_ITER_BASE, rng_tmp)
@@ -356,8 +289,7 @@ def main():
     print(f"\nScore z pojedynczego przebiegu MH: {score_mh_tmp:.2f}")
     print(f"Przyjęty próg dobrego wyniku: {GOOD_SCORE_THRESHOLD:.2f}")
 
-    # ===== 6.3. Wielokrotne uruchomienia MH i SA =====
-    N_RUNS = 10  # możesz zwiększyć do 20+ dla dokładniejszej statystyki
+    N_RUNS = 10
 
     mh_results = run_many_mh(
         ciphertext,
@@ -380,7 +312,6 @@ def main():
     summarize_results("Metropolis–Hastings", mh_results)
     summarize_results("Simulated Annealing", sa_results)
 
-    # ===== 6.4. Przykładowe odszyfrowane teksty =====
     best_mh = max(mh_results, key=lambda r: r["score"])
     best_sa = max(sa_results, key=lambda r: r["score"])
 
@@ -394,7 +325,6 @@ def main():
     print("Klucz SA:", best_sa["key"])
     print(f"% poprawnego klucza (SA): {key_accuracy(true_dec_key, best_sa['key']):.2f}%")
 
-    # ===== 6.5. Analiza zbieżności – pojedynczy przebieg =====
     mh_hist = mh_results[0]["history"]
     sa_hist = sa_results[0]["history"]
 
@@ -409,7 +339,6 @@ def main():
     plt.tight_layout()
     plt.show()
 
-    # ===== 6.6. Analiza zbieżności – uśredniona krzywa =====
     mh_mean, mh_std = average_history(mh_results)
     sa_mean, sa_std = average_history(sa_results)
 
@@ -430,11 +359,6 @@ def main():
     plt.tight_layout()
     plt.show()
 
-    # ==============================
-    # 7. WPŁYW PARAMETRÓW
-    # ==============================
-
-    # ---- 7.1. MH: wpływ liczby iteracji T ----
     T_values = [2000, 4000, 8000, 12000]
     N_RUNS_PARAM = 5
 
@@ -470,7 +394,6 @@ def main():
     plt.tight_layout()
     plt.show()
 
-    # ---- 7.2. SA: wpływ temperatury początkowej T0 ----
     T0_values = [2.0, 5.0, 10.0, 20.0, 40.0]
     sa_acc_means_T0 = []
 
@@ -495,7 +418,6 @@ def main():
     plt.tight_layout()
     plt.show()
 
-    # ---- 7.3. SA: wpływ współczynnika chłodzenia α ----
     alpha_values = [0.9999, 0.9995, 0.999, 0.995, 0.99]
     sa_acc_means_alpha = []
 
