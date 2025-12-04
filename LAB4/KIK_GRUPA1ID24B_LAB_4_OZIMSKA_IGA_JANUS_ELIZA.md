@@ -1,5 +1,5 @@
 # Kryptografia i kryptoanaliza
-## Laboratorium 2
+## Laboratorium 4
 ### Grupa 1ID24B
 ### Autorzy: Iga Ozimska, Eliza Janus
 
