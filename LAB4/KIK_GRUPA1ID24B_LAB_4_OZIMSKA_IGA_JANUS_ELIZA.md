@@ -61,7 +61,6 @@ flowchart TD
 
 ```
 #### Implementacja
-
 Plik zad1.py
 ``` Python
 plik zad1.py
