@@ -192,86 +192,87 @@ lepiej odtwarzają tekst jawny.
 ```mermaid
 flowchart TD
 
-    %% GŁÓWNY PROGRAM
-    A[Start] --> B[parse_args(sys.argv[1:])]
-    B --> C{Czy podano seed?}
-    C -- Tak --> D[random.seed(seed)]
-    C -- Nie --> E[Bez ustawiania ziarna]
+    A([Start]) --> B[Parsowanie argumentow]
+    B --> C{Podano seed}
+    C -->|Tak| D[Ustaw seed]
+    C -->|Nie| E[Pomin]
     D --> F
     E --> F
 
-    F[read_file(infile)] --> G[clean_text(cipher_raw)]
-    G --> H{Długość cipher < 2?}
-    H -- Tak --> I[Wypisz błąd\nZakończ program]
-    H -- Nie --> J[read_file(ref)]
-    
-    J --> K[clean_text(ref_raw)]
-    K --> L{Długość ref < 100?}
-    L -- Tak --> M[Wypisz ostrzeżenie\n(mało danych referencyjnych)]
-    L -- Nie --> N[Bez ostrzeżenia]
+    F[Wczytaj szyfrogram] --> G[Oczysc szyfrogram]
+    G --> H{Za krotki szyfrogram}
+    H -->|Tak| I[Blad i koniec]
+    H -->|Nie| J[Wczytaj tekst referencyjny]
+
+    J --> K[Oczysc tekst referencyjny]
+    K --> L{Ref za krotki}
+    L -->|Tak| M[Wypisz ostrzezenie]
+    L -->|Nie| N[Kontynuuj]
     M --> O
     N --> O
 
-    O[build_bigram_counts(ref)] --> P[smooth_and_probs(Mref_counts, alpha)\n=> Mref_probs]
+    O[Zlicz bigramy ref] --> P[Wylicz prawd bigramow]
+    P --> Q[Ustaw najlepszy logp globalny]
 
-    P --> Q[Ustaw best_overall_perm = None\nbest_overall_logpl = -1e99]
+    Q --> R{Restart}
+    R --> S[Uruchom MH]
+    S --> T[Odbierz perm i logp]
 
-    Q --> R{{Pętla po restartach\nr = 1..restarts}}
-    R --> S[mh_run(cipher, Mref_probs,\n T=iter, alpha, verbose)]
-    S --> T[Odbierz (perm, logpl)]
-    T --> U{logpl > best_overall_logpl?}
-    U -- Tak --> V[Zaktualizuj\nbest_overall_logpl,\nbest_overall_perm]
-    U -- Nie --> W[Bez zmian]
-    V --> X{Koniec restartów?}
-    W --> X{Koniec restartów?}
-    X -- Nie --> R
-    X -- Tak --> Y[decrypt_with_perm(cipher,\n best_overall_perm)\n=> best_plain]
+    T --> U{Lepszy wynik}
+    U -->|Tak| V[Zapisz najlepszy]
+    U -->|Nie| W[Bez zmian]
+    V --> X
+    W --> X
 
-    Y --> Z[save_text(outfile, best_plain)]
-    Z --> ZA{Czy podano keyout?}
-    ZA -- Tak --> ZB[save_key_mapping(keyout,\n best_overall_perm)]
-    ZA -- Nie --> ZC[Pomijamy zapis klucza]
-    ZB --> ZD[Wypisz komunikaty o zapisaniu\ntekstów i klucza]
-    ZC --> ZD[Wypisz komunikaty o zapisaniu\ntekstów]
-    ZD --> ZE[Wypisz najlepsze log-prawdopodobieństwo]
-    ZE --> ZF[Stop]
+    X --> Y{Koniec restartow}
+    Y -->|Nie| R
+    Y -->|Tak| Z[Odszyfruj najlepsza perm]
 
+    Z --> ZA[Zapisz tekst jawny]
+    ZA --> ZB{Podano plik klucza}
+    ZB -->|Tak| ZC[Zapisz klucz]
+    ZB -->|Nie| ZD[Pomin klucz]
 
-    %% PODPROGRAM MH_RUN
-    subgraph MH[mh_run(cipher_text, Mref_probs, T, alpha, verbose)]
-        direction TB
-        MH1[Losowa permutacja\ncurrent_perm = random_perm()] --> MH2[decrypt_with_perm(cipher_text,\n current_perm)]
-        MH2 --> MH3[bigram_counts_from_decrypted(dec)]
-        MH3 --> MH4[log_pl_from_bigram_counts(Mhat,\n Mref_probs)\n=> current_logpl]
-        MH4 --> MH5[Ustaw best_perm = current_perm,\n best_logpl = current_logpl]
+    ZC --> ZE[Wypisz podsumowanie]
+    ZD --> ZE[Wypisz podsumowanie]
+    ZE --> ZF([Koniec])
+   ```
+```mermaid
+flowchart TD
 
-        MH5 --> MH6{{Pętla t = 1..T}}
-        MH6 --> MH7[swap_two(current_perm)\n=> cand_perm]
-        MH7 --> MH8[decrypt_with_perm(cipher_text,\n cand_perm)\n=> cand_dec]
-        MH8 --> MH9[bigram_counts_from_decrypted(cand_dec)\n=> cand_Mhat]
-        MH9 --> MH10[log_pl_from_bigram_counts(cand_Mhat,\n Mref_probs)\n=> cand_logpl]
-        MH10 --> MH11[delta = cand_logpl - current_logpl]
+    M1([Start MH]) --> M2[Losowa permutacja]
+    M2 --> M3[Odszyfruj tekst]
+    M3 --> M4[Zlicz bigramy]
+    M4 --> M5[Policz logp]
+    M5 --> M6[Ustaw jako najlepszy]
 
-        MH11 --> MH12{delta >= 0?}
-        MH12 -- Tak --> MH13[accept = True]
-        MH12 -- Nie --> MH14[u = random.random()\naccept = (u <= exp(delta))]
+    M6 --> M7{Iteracja}
+    M7 -->|Tak| M8[Swap dwoch liter]
+    M7 -->|Nie| M24([Koniec i zwroc najlepszy])
 
-        MH13 --> MH15{accept?}
-        MH14 --> MH15{accept?}
+    M8 --> M9[Odszyfruj kandydat]
+    M9 --> M10[Zlicz bigramy kandydata]
+    M10 --> M11[Policz logp kandydata]
+    M11 --> M12[Delta logp]
 
-        MH15 -- Tak --> MH16[Zaktualizuj current_perm,\n current_logpl]
-        MH15 -- Nie --> MH17[Zachowaj current_perm,\n current_logpl]
+    M12 --> M13{Delta >= 0}
+    M13 -->|Tak| M14[Akceptuj]
+    M13 -->|Nie| M15[Oblicz prawdopodobienstwo]
 
-        MH16 --> MH18{cand_logpl > best_logpl?}
-        MH17 --> MH19[Kontynuuj pętlę]
-        MH18 -- Tak --> MH20[Zaktualizuj best_perm,\n best_logpl]
-        MH18 -- Nie --> MH19
-        MH20 --> MH19
+    M15 --> M16{Los <= prawdopodobienstwo}
+    M16 -->|Tak| M14
+    M16 -->|Nie| M17[Odrzuc]
 
-        MH19 --> MH21{Koniec iteracji T?}
-        MH21 -- Nie --> MH6
-        MH21 -- Tak --> MH22[Zwróć (best_perm,\n best_logpl)]
-    end
+    M14 --> M18[Zmien biezacy]
+    M18 --> M19{Kandydat lepszy}
+    M19 -->|Tak| M20[Zmien najlepszy]
+    M19 -->|Nie| M21[Bez zmian]
+    M20 --> M22
+    M21 --> M22
+    M17 --> M22
+
+    M22 --> M7
+
 ```
 #### Implementacja
 ``` Python
@@ -672,93 +673,89 @@ optymalizacji Symulowanego Wyżarzania (ang. Simulated Annealing).
 ```mermaid
 flowchart TD
 
-    %% --- GŁÓWNY PROGRAM ---
-
-    A[Start] --> B[parse_args(sys.argv)]
-    B --> C{Czy podano seed?}
-    C -- Tak --> D[random.seed(seed)]
-    C -- Nie --> E[Bez ustawiania ziarna]
+    A([Start]) --> B[Parsowanie argumentow]
+    B --> C{Podano seed}
+    C -->|Tak| D[Ustaw seed]
+    C -->|Nie| E[Pomin]
     D --> F
     E --> F
 
-    F[read_file(infile)] --> G[clean_text(cipher)]
-    G --> H{cipher ma < 2 litery?}
-    H -- Tak --> I[Wypisz błąd\nZakończ program]
-    H -- Nie --> J[read_file(ref)]
+    F[Wczytaj szyfrogram] --> G[Oczysc szyfrogram]
+    G --> H{Za krotki szyfrogram}
+    H -->|Tak| I[Blad i koniec]
+    H -->|Nie| J[Wczytaj tekst referencyjny]
 
-    J --> K[clean_text(ref)]
-    K --> L{ref < 100 znaków?}
-    L -- Tak --> M[Wypisz ostrzeżenie]
-    L -- Nie --> N[Przejdź dalej]
+    J --> K[Oczysc tekst ref]
+    K --> L{Ref za krotki}
+    L -->|Tak| M[Ostrzezenie]
+    L -->|Nie| N[Kontynuuj]
     M --> O
     N --> O
 
-    O[compute_phi_norm(ref)\n=> phi_norm, max_phi]
+    O[Wylicz phi norm] --> P[Ustaw najlepszy wynik globalny]
 
-    O --> P[best_overall_score = -∞]
+    P --> Q{Restart SA}
+    Q --> R[Uruchom SA]
+    R --> S[Odbierz perm i wynik]
 
-    P --> Q{{Pętla restartów SA:\nr = 1..restarts}}
-    Q --> R[sa_run(cipher, phi_norm,\nN, T0, alpha, verbose)]
-    R --> S[Odbierz (perm, score)]
+    S --> T{Lepszy wynik}
+    T -->|Tak| U[Zapisz najlepszy]
+    T -->|Nie| V[Bez zmian]
+    U --> W
+    V --> W
 
-    S --> T{score > best_overall_score?}
-    T -- Tak --> U[Zapisz best_overall_score,\nbest_overall_perm]
-    T -- Nie --> V[Brak zmian]
+    W --> X{Koniec restartow}
+    X -->|Nie| Q
+    X -->|Tak| Y[Odszyfruj najlepsza perm]
 
-    U --> W{Koniec restartów?}
-    V --> W{Koniec restartów?}
-    W -- Nie --> Q
-    W -- Tak --> X[decrypt_with_perm(cipher,\nbest_overall_perm)\n=> best_plain]
+    Y --> Z[Zapisz tekst jawny]
+    Z --> ZA{Podano plik klucza}
+    ZA -->|Tak| ZB[Zapisz klucz]
+    ZA -->|Nie| ZC[Pomin klucz]
 
-    X --> Y[save_text(outfile, best_plain)]
-    Y --> Z{Podano keyout?}
-    Z -- Tak --> ZA[save_key_mapping(keyout,\nbest_overall_perm)]
-    Z -- Nie --> ZB[Bez zapisu klucza]
+    ZB --> ZD[Wypisz podsumowanie]
+    ZC --> ZD[Wypisz podsumowanie]
+    ZD --> ZE([Koniec])
 
-    ZA --> ZC[Wypisz komunikaty]
-    ZB --> ZC[Wypisz komunikaty]
-    ZC --> ZD[Stop]
+```
+```mermaid
+flowchart TD
 
+    S1([Start SA]) --> S2[Losowa permutacja]
+    S2 --> S3[Policz wynik]
+    S3 --> S4[Zapisz jako najlepszy]
+    S4 --> S5[Temperatura T = T0]
 
-    %% --- ALGORYTM SA_RUN ---
+    S5 --> S6{Iteracja}
+    S6 -->|Tak| S7[Swap dwoch liter]
+    S6 -->|Nie| S23([Zakoncz i zwroc najlepszy])
 
-    subgraph SA[sa_run(cipher, phi_norm, N, T0, alpha)]
-        direction TB
+    S7 --> S8[Policz wynik kandydata]
+    S8 --> S9[Delta wyniku]
 
-        SA1[random_perm() => current_perm] --> SA2[score_perm(current)]
-        SA2 --> SA3[Ustaw best_perm = current,\nbest_score = current_score]
-        SA3 --> SA4[T = T0]
+    S9 --> S10{Delta > 0}
+    S10 -->|Tak| S11[Akceptuj]
+    S10 -->|Nie| S12{T bardzo mala}
+    S12 -->|Tak| S13[Odrzuc]
+    S12 -->|Nie| S14[Oblicz prawdopodobienstwo]
 
-        SA4 --> SA5{{Iteracja k = 1..N}}
-        SA5 --> SA6[swap_two(current_perm)\n=> cand_perm]
-        SA6 --> SA7[score_perm(cand_perm)\n=> cand_score]
-        SA7 --> SA8[delta = cand_score - current_score]
+    S14 --> S15{Los < prawdop}
+    S15 -->|Tak| S11
+    S15 -->|Nie| S13
 
-        SA8 --> SA9{delta > 0?}
-        SA9 -- Tak --> SA10[accept = True]
-        SA9 -- Nie --> SA11{T <= 1e-12?}
-        SA11 -- Tak --> SA12[accept = False]
-        SA11 -- Nie --> SA13[prob = exp(delta / T)]
-        SA13 --> SA14[accept = (rand < prob)]
+    S11 --> S16[Zmien biezacy]
+    S13 --> S17[Zachowaj biezacy]
 
-        SA10 --> SA15{accept?}
-        SA12 --> SA15{accept?}
-        SA14 --> SA15{accept?}
+    S16 --> S18{Lepszy od najlepszego}
+    S18 -->|Tak| S19[Zmien najlepszy]
+    S18 -->|Nie| S20[Bez zmian]
+    S19 --> S21
+    S20 --> S21
+    S17 --> S21
 
-        SA15 -- Tak --> SA16[Zaktualizuj current_perm,\ncurrent_score]
-        SA15 -- Nie --> SA17[Zachowaj current_perm]
+    S21 --> S22[Zmniejsz temperature: T = T * alpha]
+    S22 --> S5
 
-        SA16 --> SA18{cand_score > best_score?}
-        SA17 --> SA19[Kontynuuj]
-        SA18 -- Tak --> SA20[zapisz best_perm,\nbest_score]
-        SA18 -- Nie --> SA19
-        SA20 --> SA19
-
-        SA19 --> SA21[T = T * alpha]
-        SA21 --> SA22{Koniec N?}
-        SA22 -- Nie --> SA5
-        SA22 -- Tak --> SA23[Zwróć best_perm,\nbest_score]
-    end
 ```
 #### Implementacja
 ``` Python
