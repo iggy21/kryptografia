@@ -1,0 +1,1 @@
+this is a long reference text containing natural english words and sentences that the algorithm can use to estimate the frequency of bigrams in the language. the longer the text the better.
