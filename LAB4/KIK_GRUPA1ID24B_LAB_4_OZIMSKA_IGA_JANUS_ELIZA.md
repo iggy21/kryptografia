@@ -848,24 +848,24 @@ Dlatego generator LCG będzie podatny nawet przy modułach 256-, 512- czy 2048-b
 4. Różnice między PRNG a CSPRNG
 Generator pseudolosowy (PRNG) taki jak LCG nie jest przeznaczony do zastosowań kryptograficznych. Kryptograficzny generator pseudolosowy (CSPRNG) musi spełniać znacznie bardziej rygorystyczne wymagania:
 
-1. Nieprzewidywalność przyszłych wartości (forward security)
+- Nieprzewidywalność przyszłych wartości (forward security)
 Nawet znając dowolnie długi fragment wyjścia, przeciwnik nie może przewidzieć kolejnych bitów lepiej niż przez losowe zgadywanie. LCG tej właściwości nie posiada — znajomość kilku stanów pozwala przewidzieć całą przyszłą sekwencję.
 
-2. Niemożność odtworzenia stanu wewnętrznego
+- Niemożność odtworzenia stanu wewnętrznego
 CSPRNG powinien uniemożliwiać odzyskanie stanu wewnętrznego z obserwacji wyjścia. W LCG jest to proste, gdyż sekwencja stanów wynika z równań liniowych.
 
-3. Brak korelacji i odporność na testy statystyczne
+- Brak korelacji i odporność na testy statystyczne
 Ciągi generowane przez CSPRNG muszą przechodzić zaawansowane testy losowości i nie mogą posiadać wykrywalnych zależności. LCG wykazuje silne korelacje w wymiarach wielowymiarowych i oblewa testy statystyczne wysokiego rzędu.
 Kluczową różnicą jest to, że CSPRNG korzysta z nieliniowych funkcji jednokierunkowych, co radykalnie utrudnia odwrócenie procesu generowania bitów — odwrotnie niż w przypadku LCG.
 
 5. Trzy realistyczne scenariusze wystąpienia znanego tekstu jawnego
-1. Nagłówki protokołów sieciowych
+- Nagłówki protokołów sieciowych
 W protokołach takich jak HTTP, SMTP czy FTP występują stałe i przewidywalne pola (np. „GET /”, „Host:”). Jeśli są szyfrowane prostym szyfrem strumieniowym, służą jako naturalne źródło znanego tekstu.
 
-2. Nagłówki plików o standardowym formacie
+- Nagłówki plików o standardowym formacie
 Wiele formatów plików zaczyna się od charakterystycznych podpisów („magic numbers”), np. %PDF-, 89 50 4E 47 (PNG), FF D8 FF (JPEG). Atakujący, przechwytując zaszyfrowany plik, zna początek tekstu jawnego.
 
-3. Szablony komunikatów systemowych
+- Szablony komunikatów systemowych
 
 Automatyczne wiadomości, raporty logów, szablony e-maili i inne strukturalnie powtarzalne treści zawierają przewidywalne fragmenty („Hello”, „Dear user”). W takich przypadkach wzorzec tekstu można łatwo przewidzieć.
 We wszystkich tych scenariuszach znany plaintext nie jest wynikiem błędu użytkownika, lecz naturalnym elementem komunikacji.
